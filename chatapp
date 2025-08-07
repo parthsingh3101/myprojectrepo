@@ -1,0 +1,59 @@
+# Server-side (simplified)
+import socket
+import threading
+
+def handle_client(client_socket, address, clients):
+    while True:
+        try:
+            message = client_socket.recv(1024).decode('utf-8')
+            if not message:
+                break
+            print(f"Received from {address}: {message}")
+            # Broadcast message to all other clients
+            for c in clients:
+                if c != client_socket:
+                    c.sendall(message.encode('utf-8'))
+        except:
+            break
+    client_socket.close()
+    clients.remove(client_socket)
+
+def start_server():
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(('0.0.0.0', 12345)) # Bind to all available interfaces
+    server.listen(5)
+    print("Server listening on port 12345...")
+    clients = []
+    while True:
+        client_socket, address = server.accept()
+        clients.append(client_socket)
+        print(f"Accepted connection from {address}")
+        client_handler = threading.Thread(target=handle_client, args=(client_socket, address, clients))
+        client_handler.start()
+
+# Client-side (simplified)
+import socket
+import threading
+
+def receive_messages(client_socket):
+    while True:
+        try:
+            message = client_socket.recv(1024).decode('utf-8')
+            print(message)
+        except:
+            break
+
+def start_client():
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect(('127.0.0.1', 12345)) # Connect to local server
+    
+    receive_thread = threading.Thread(target=receive_messages, args=(client,))
+    receive_thread.start()
+
+    while True:
+        message = input()
+        client.send(message.encode('utf-8'))
+
+# To run: start the server in one terminal, then multiple clients in others.
+# start_server() # In server terminal
+# start_client() # In client terminals
